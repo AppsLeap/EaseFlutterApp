@@ -32,7 +32,7 @@ class SpareItem {
   SpareItem({
     required this.name,
     required this.quantity,
-    this.warranty = '2 years',
+    this.warranty = '24',
     this.cost = '₹1000',
   });
 
@@ -54,10 +54,15 @@ class _RepairStatusPageState extends State<RepairStatusPage> {
   bool isPaid = false;
   bool isDelivered = false;
   double rating = 0;
-  DateTime selectedDate = DateTime.now();
-  TimeOfDay selectedTime = TimeOfDay.now();
+  DateTime selectedDateTime = DateTime.now();
+  bool userModifiedDateTime = false;
   double serviceCost = 0;
   double finalCost = 0;
+  bool isUpdateButtonEnabled = true;
+  bool isUpdateCustomerButtonEnabled = true;
+  String customerAddress = '';
+  // Add payment mode state
+  String _selectedPaymentMode = 'cash';
 
   final List<File> afterRepairPhotos = [];
   final ImagePicker _picker = ImagePicker();
@@ -98,6 +103,26 @@ class _RepairStatusPageState extends State<RepairStatusPage> {
   final TextEditingController _serviceCostController = TextEditingController();
   final TextEditingController _finalCostController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 1), _updateDateTime);
+  }
+
+  int getTotalQuantity() {
+    return spareItems.fold(0, (sum, item) => sum + (int.tryParse(item.quantity) ?? 0));
+  }
+
+  void _updateDateTime() {
+    if (!userModifiedDateTime && mounted) {
+      setState(() {
+        selectedDateTime = DateTime.now();
+      });
+      Future.delayed(const Duration(seconds: 1), _updateDateTime);
+    }
+  }
 
   Future<void> _takeAfterRepairPhoto() async {
     try {
@@ -125,6 +150,7 @@ class _RepairStatusPageState extends State<RepairStatusPage> {
     _serviceCostController.dispose();
     _finalCostController.dispose();
     _searchController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
@@ -139,26 +165,89 @@ class _RepairStatusPageState extends State<RepairStatusPage> {
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate,
+      initialDate: selectedDateTime,
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-    if (picked != null && picked != selectedDate) {
-      setState(() {
-        selectedDate = picked;
-      });
+    if (picked != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final selectedDay = DateTime(picked.year, picked.month, picked.day);
+
+      if (selectedDay.isBefore(today)) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Invalid Date'),
+              content: const Text('Delivery date cannot be less than current date.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      } else {
+        setState(() {
+          userModifiedDateTime = true;
+          selectedDateTime = DateTime(
+            picked.year,
+            picked.month,
+            picked.day,
+            selectedDateTime.hour,
+            selectedDateTime.minute,
+          );
+        });
+      }
     }
   }
 
   Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: selectedTime,
+      initialTime: TimeOfDay.fromDateTime(selectedDateTime),
     );
-    if (picked != null && picked != selectedTime) {
-      setState(() {
-        selectedTime = picked;
-      });
+    if (picked != null) {
+      final now = DateTime.now();
+      final selectedDate = DateTime(
+        selectedDateTime.year,
+        selectedDateTime.month,
+        selectedDateTime.day,
+        picked.hour,
+        picked.minute,
+      );
+
+      if (selectedDate.isBefore(now)) {
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Invalid Time'),
+                content: const Text('Delivery time cannot be earlier than the current time.'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('OK'),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      } else {
+        setState(() {
+          userModifiedDateTime = true;
+          selectedDateTime = selectedDate;
+        });
+      }
     }
   }
 
@@ -203,6 +292,14 @@ class _RepairStatusPageState extends State<RepairStatusPage> {
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    if (value.isNotEmpty && !RegExp(r'^\d+$').hasMatch(value)) {
+                      _quantityController.text = value.replaceAll(RegExp(r'[^\d]'), '');
+                      _quantityController.selection = TextSelection.fromPosition(
+                        TextPosition(offset: _quantityController.text.length),
+                      );
+                    }
+                  },
                 ),
               ],
             ),
@@ -219,12 +316,25 @@ class _RepairStatusPageState extends State<RepairStatusPage> {
                 if (_nameController.text.isNotEmpty &&
                     _quantityController.text.isNotEmpty) {
                   setState(() {
-                    spareItems.add(
-                      SpareItem(
-                        name: _nameController.text,
-                        quantity: _quantityController.text,
-                      ),
+                    // Check if the spare item already exists
+                    int existingIndex = spareItems.indexWhere(
+                            (item) => item.name.toLowerCase() == _nameController.text.toLowerCase()
                     );
+
+                    if (existingIndex != -1) {
+                      // If item exists, update its quantity
+                      int currentQuantity = int.parse(spareItems[existingIndex].quantity);
+                      int newQuantity = int.parse(_quantityController.text);
+                      spareItems[existingIndex].quantity = (currentQuantity + newQuantity).toString();
+                    } else {
+                      // If item doesn't exist, add new item
+                      spareItems.add(
+                        SpareItem(
+                          name: _nameController.text,
+                          quantity: _quantityController.text,
+                        ),
+                      );
+                    }
                   });
                   _nameController.clear();
                   _quantityController.clear();
@@ -448,8 +558,8 @@ class _RepairStatusPageState extends State<RepairStatusPage> {
                             child: TextButton(
                               onPressed: () => _selectDate(context),
                               child: Text(
-                                DateFormat('dd/MM/yyyy').format(selectedDate),
-                                style: TextStyle(color: Colors.black),
+                                DateFormat('dd/MM/yyyy').format(selectedDateTime),
+                                style: const TextStyle(color: Colors.black),
                               ),
                             ),
                           ),
@@ -462,8 +572,8 @@ class _RepairStatusPageState extends State<RepairStatusPage> {
                             child: TextButton(
                               onPressed: () => _selectTime(context),
                               child: Text(
-                                selectedTime.format(context),
-                                style: TextStyle(color: Colors.black),
+                                TimeOfDay.fromDateTime(selectedDateTime).format(context),
+                                style: const TextStyle(color: Colors.black),
                               ),
                             ),
                           ),
@@ -473,52 +583,79 @@ class _RepairStatusPageState extends State<RepairStatusPage> {
 
                     const SizedBox(height: 12),
 
-                    const Text(
-                      'Spares Used',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Spares Used',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          'Total Spares: ${getTotalQuantity()}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     Table(
                       border: TableBorder.all(),
                       columnWidths: const {
-                        0: FlexColumnWidth(2),
+                        0: FlexColumnWidth(3),
                         1: FlexColumnWidth(1),
-                        2: FlexColumnWidth(2),
-                        3: FlexColumnWidth(1),
+                        2: FlexColumnWidth(1),
+                        3: FlexColumnWidth(1.5),
                         4: FlexColumnWidth(0.5),
                       },
                       children: [
                         const TableRow(
+                          decoration: BoxDecoration(
+                            color: Colors.grey,
+                          ),
                           children: [
                             Padding(
                               padding: EdgeInsets.all(8.0),
                               child: Text(
                                 'Spares',
-                                style: TextStyle(fontSize: 13),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             Padding(
                               padding: EdgeInsets.all(8.0),
                               child: Text(
                                 'Qty',
-                                style: TextStyle(fontSize: 13),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             Padding(
                               padding: EdgeInsets.all(8.0),
                               child: Text(
-                                'Warranty',
-                                style: TextStyle(fontSize: 13),
+                                'Wty(months)',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             Padding(
                               padding: EdgeInsets.all(8.0),
                               child: Text(
                                 'Cost',
-                                style: TextStyle(fontSize: 13),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             Padding(
@@ -689,11 +826,46 @@ class _RepairStatusPageState extends State<RepairStatusPage> {
                           onChanged: (String? newValue) {
                             setState(() {
                               selectedDeliveryType = newValue!;
+                              if (selectedDeliveryType == 'Pickup') {
+                                _addressController.clear();
+                              }
                             });
                           },
                         ),
                       ),
                     ),
+
+                    if (selectedDeliveryType == 'Home Delivery') ...[
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Customer Address',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: TextField(
+                          controller: _addressController,
+                          maxLines: 3,
+                          decoration: const InputDecoration(
+                            hintText: 'delivery address',
+                            contentPadding: EdgeInsets.all(12),
+                            border: InputBorder.none,
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              customerAddress = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
 
                     const SizedBox(height: 12),
 
@@ -779,54 +951,128 @@ class _RepairStatusPageState extends State<RepairStatusPage> {
                       ],
                     ),
 
-                    const SizedBox(height: 12),
-
-                    const Text(
-                      'Overall Experience',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                    if (isPaid) ...[
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Payment Mode',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(5, (index) {
-                        return IconButton(
-                          icon: Icon(
-                            index < rating ? Icons.star : Icons.star_border,
-                            color: Colors.amber,
-                            size: 28,
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Radio(
+                            value: 'cash',
+                            groupValue: _selectedPaymentMode,
+                            onChanged: (value) {
+                              setState(() => _selectedPaymentMode = value.toString());
+                            },
                           ),
-                          onPressed: () {
-                            setState(() {
-                              rating = index + 1;
-                            });
-                          },
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          constraints: const BoxConstraints(),
-                        );
-                      }),
-                    ),
+                          const Text('Cash'),
+                          const SizedBox(width: 16),
+                          Radio(
+                            value: 'card',
+                            groupValue: _selectedPaymentMode,
+                            onChanged: (value) {
+                              setState(() => _selectedPaymentMode = value.toString());
+                            },
+                          ),
+                          const Text('Card'),
+                          const SizedBox(width: 16),
+                          Radio(
+                            value: 'upi',
+                            groupValue: _selectedPaymentMode,
+                            onChanged: (value) {
+                              setState(() => _selectedPaymentMode = value.toString());
+                            },
+                          ),
+                          const Text('UPI'),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Overall Experience',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(5, (index) {
+                          return IconButton(
+                            icon: Icon(
+                              index < rating ? Icons.star : Icons.star_border,
+                              color: Colors.amber,
+                              size: 28,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                rating = index + 1;
+                              });
+                            },
+                            padding: const EdgeInsets .symmetric(horizontal: 4),
+                            constraints: const BoxConstraints(),
+                          );
+                        }),
+                      ),
+                    ],
 
                     const SizedBox(height: 16),
 
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                        ),
-                        child: const Text(
-                          'Update',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: isUpdateButtonEnabled
+                                ? () {
+                              // Handle update logic
+                              // Now includes payment mode in the update
+                              print('Payment Mode: $_selectedPaymentMode');
+                            }
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                            ),
+                            child: const Text(
+                              'Update',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: isUpdateCustomerButtonEnabled
+                                ? () {
+                              setState(() {
+                                isUpdateButtonEnabled = false;
+                                isUpdateCustomerButtonEnabled = false;
+                              });
+                              // Handle update customer logic
+                              // Now includes payment mode in the update
+                              print('Payment Mode: $_selectedPaymentMode');
+                            }
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                            ),
+                            child: const Text(
+                              'Update Customer Too',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
