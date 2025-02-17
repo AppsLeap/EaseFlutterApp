@@ -22,16 +22,16 @@ class _EmployeeServicesHomeScreenState extends State<EmployeeServicesHomeScreen>
   final TextEditingController searchController = TextEditingController();
 
   final List<Map<String, String>> tickets = [
-    {"id": "#1", "name": "John Doe", "status": "Assigned", "repairType": "Software Issue", "date": "2025-02-06", "employee": "Alice"},
-    {"id": "#2", "name": "Jane Smith", "status": "Assigned", "repairType": "Screen Replacement", "date": "2025-02-07", "employee": "Bob"},
-    {"id": "#3", "name": "Michael Brown", "status": "Assigned", "repairType": "Battery Issue", "date": "2025-02-08", "employee": "Charlie"},
-    {"id": "#4", "name": "Emily White", "status": "Assigned", "repairType": "Keyboard Issue", "date": "2025-02-09", "employee": "David"},
-    {"id": "#5", "name": "Sophia Green", "status": "Assigned", "repairType": "Motherboard Repair", "date": "2025-02-10", "employee": "Eve"},
-    {"id": "#6", "name": "Liam King", "status": "Assigned", "repairType": "Overheating", "date": "2025-02-11", "employee": "Frank"},
-    {"id": "#7", "name": "Olivia Scott", "status": "Assigned", "repairType": "Software Update", "date": "2025-02-12", "employee": "Grace"},
-    {"id": "#8", "name": "Noah Adams", "status": "Assigned", "repairType": "Hard Drive Replacement", "date": "2025-02-13", "employee": "Hank"},
-    {"id": "#9", "name": "Ava Walker", "status": "Assigned", "repairType": "RAM Upgrade", "date": "2025-02-14", "employee": "Ivy"},
-    {"id": "#10", "name": "Mason Young", "status": "Assigned", "repairType": "Virus Removal", "date": "2025-02-15", "employee": "Jack"},
+    {"id": "#1", "name": "John Doe", "status": "Assigned", "repairType": "Software Issue", "date": "06-02-2025", "employee": "Alice"},
+    {"id": "#2", "name": "Jane Smith", "status": "Assigned", "repairType": "Screen Replacement", "date": "07-02-2025", "employee": "Bob"},
+    {"id": "#3", "name": "Michael Brown", "status": "Assigned", "repairType": "Battery Issue", "date": "08-02-2025", "employee": "Charlie"},
+    {"id": "#4", "name": "Emily White", "status": "Assigned", "repairType": "Keyboard Issue", "date": "09-02-2025", "employee": "David"},
+    {"id": "#5", "name": "Sophia Green", "status": "Assigned", "repairType": "Motherboard Repair", "date": "10-02-2025", "employee": "Eve"},
+    {"id": "#6", "name": "Liam King", "status": "Assigned", "repairType": "Overheating", "date": "11-02-2025", "employee": "Frank"},
+    {"id": "#7", "name": "Olivia Scott", "status": "Assigned", "repairType": "Software Update", "date": "12-02-2025", "employee": "Grace"},
+    {"id": "#8", "name": "Noah Adams", "status": "Assigned", "repairType": "Hard Drive Replacement", "date": "13-02-2025", "employee": "Hank"},
+    {"id": "#9", "name": "Ava Walker", "status": "Assigned", "repairType": "RAM Upgrade", "date": "14-02-2025", "employee": "Ivy"},
+    {"id": "#10", "name": "Mason Young", "status": "Assigned", "repairType": "Virus Removal", "date": "15-02-2025", "employee": "Jack"},
   ];
 
   void _showCompletedTickets() {
