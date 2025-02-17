@@ -4,6 +4,7 @@ import 'profile_screen.dart';
 import 'create_ticket.dart';
 import 'ticket_tracker.dart';
 import 'repair_status.dart';
+import 'sales_screen.dart';  // Add this import
 
 class EmployeeServicesHomeScreen extends StatefulWidget {
   const EmployeeServicesHomeScreen({super.key});
@@ -65,6 +66,13 @@ class _EmployeeServicesHomeScreenState extends State<EmployeeServicesHomeScreen>
         });
       });
     }
+  }
+
+  void _navigateToSalesScreen() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const SalesScreen()),
+    );
   }
 
   @override
@@ -129,7 +137,10 @@ class _EmployeeServicesHomeScreenState extends State<EmployeeServicesHomeScreen>
         ),
         const SizedBox(width: 16),
         TextButton(
-          onPressed: () => setState(() => selectedTab = 1),
+          onPressed: () {
+            setState(() => selectedTab = 1);
+            _navigateToSalesScreen();
+          },
           child: Text(
             "Sales",
             style: TextStyle(
